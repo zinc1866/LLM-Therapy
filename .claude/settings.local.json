@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(cmd /c \"where node 2>nul || echo Node not found\")",
+      "Bash(cmd /c \"where npm 2>nul || echo npm not found\")",
+      "Bash(node --version:*)",
+      "Bash(powershell -Command:*)"
+    ]
+  }
+}
