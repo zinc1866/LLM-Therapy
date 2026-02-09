@@ -7,7 +7,9 @@ import Link from 'next/link';
 export default function NewClientPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [generateFocus, setGenerateFocus] = useState('');
 
   const [formData, setFormData] = useState({
     // Basic Info
@@ -47,6 +49,51 @@ export default function NewClientPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleGenerate = async () => {
+    setError('');
+    setGenerating(true);
+
+    try {
+      const response = await fetch('/api/clients/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ focus: generateFocus || undefined }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate client');
+      }
+
+      const data = await response.json();
+
+      setFormData({
+        name: data.name || '',
+        presentingConcern: data.presentingConcern || '',
+        age: data.age?.toString() || '',
+        pronouns: data.pronouns || '',
+        genderIdentity: data.genderIdentity || '',
+        raceEthnicity: data.raceEthnicity || '',
+        nationality: data.nationality || '',
+        sexualOrientation: data.sexualOrientation || '',
+        disability: data.disability || '',
+        religion: data.religion || '',
+        socioeconomic: data.socioeconomic || '',
+        immigrationStatus: data.immigrationStatus || '',
+        indigenousIdentity: data.indigenousIdentity || '',
+        veteranStatus: data.veteranStatus || '',
+        fullBackstory: data.fullBackstory || '',
+        personality: data.personality || '',
+        communicationStyle: data.communicationStyle || '',
+        resistanceLevel: data.resistanceLevel || 'medium',
+        therapeuticGoals: data.therapeuticGoals || '',
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate client');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,6 +139,32 @@ export default function NewClientPage() {
           Define a client profile with diverse intersectional identities for
           students to practice with.
         </p>
+      </div>
+
+      {/* Generate Client Section */}
+      <div className="card bg-gradient-to-r from-primary-50 to-purple-50 border-primary-200 mb-8">
+        <h2 className="text-lg font-semibold mb-2">Generate Client with AI</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Let AI create a diverse client profile with authentic cultural backgrounds.
+          You can edit the generated profile before saving.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={generateFocus}
+            onChange={(e) => setGenerateFocus(e.target.value)}
+            placeholder="Optional: focus area (e.g., 'immigrant family dynamics', 'LGBTQ+ identity', 'grief')"
+            className="input flex-1"
+          />
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            className="btn btn-primary whitespace-nowrap"
+          >
+            {generating ? 'Generating...' : 'Generate Client'}
+          </button>
+        </div>
       </div>
 
       {error && (

@@ -289,11 +289,23 @@ export function SessionInterface({
       <div className="bg-white border-x border-gray-200 h-[400px] overflow-y-auto p-4 chat-container">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
-            <p>Begin the session by introducing yourself.</p>
-            <p className="text-sm mt-2">
-              You might start with: &quot;Hello, my name is [your name]. What
-              brings you in today?&quot;
-            </p>
+            {sessionNumber === 1 ? (
+              <>
+                <p>Begin the session by introducing yourself.</p>
+                <p className="text-sm mt-2">
+                  You might start with: &quot;Hello, my name is [your name]. What
+                  brings you in today?&quot;
+                </p>
+              </>
+            ) : (
+              <>
+                <p>Continue your session with {clientName}.</p>
+                <p className="text-sm mt-2">
+                  You might start with: &quot;It&apos;s good to see you again. How have
+                  things been since we last met?&quot;
+                </p>
+              </>
+            )}
           </div>
         )}
         {messages.map((message) => (
