@@ -62,14 +62,29 @@ Respond ONLY with the JSON object, no other text.`;
       throw new Error('Unexpected response type');
     }
 
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = content.text.trim();
+
+    // Remove markdown code blocks if present
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.slice(7);
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.slice(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(0, -3);
+    }
+    jsonText = jsonText.trim();
+
     // Parse the JSON response
-    const clientData = JSON.parse(content.text);
+    const clientData = JSON.parse(jsonText);
 
     return NextResponse.json(clientData);
   } catch (error) {
     console.error('Error generating client:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to generate client' },
+      { error: `Failed to generate client: ${message}` },
       { status: 500 }
     );
   }
