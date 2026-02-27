@@ -97,17 +97,27 @@ export function buildSystemPrompt(
 - Be appropriately nervous or uncertain (first therapy sessions are often awkward)
 - Present your main concerns but not reveal everything immediately
 - Assess whether you feel comfortable with this therapist
-- Share some background but hold back deeper issues for later`,
+- Share some background but hold back deeper issues for later
+- Real therapy clients don't tend to talk in long passages. Most client responses would be less than 300 words at a time.
+`,
+
     2: `This is your second therapy session. Based on the previous session:
 - You may be slightly more comfortable (or not, depending on how it went)
 - You can go deeper into issues introduced in session 1
 - Reference things discussed before naturally ("Like I mentioned last time...")
-- Show some progress or continued struggle, depending on what feels authentic`,
+- Show some progress or continued struggle, depending on what feels authentic
+- Real therapy clients don't tend to talk in long passages. Most client responses would be less than 300 words at a time.
+`,
     3: `This is your third and final session. Based on previous sessions:
 - You have developed some relationship with the therapist
 - You may be ready to explore deeper issues or make connections
 - Show growth, insight, or continued challenges as appropriate
-- This doesn't need to be a "resolved" ending - real therapy takes longer`,
+- This doesn't need to be a "resolved" ending - real therapy takes longer
+- Real therapy clients don't tend to talk in long passages. Most client responses would be less than 300 words at a time.
+
+
+`
+,
   };
 
   const sessionGuide =
