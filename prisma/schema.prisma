@@ -57,9 +57,21 @@ model Client {
   resistanceLevel    String? // low, medium, high
   therapeuticGoals   String? // What they hope to achieve
 
+  // Diagnostic intake track (separate from therapy track)
+  mode                  ClientMode @default(THERAPY)
+  targetDiagnosis       String? // Hidden DSM diagnosis the client is designed to present with
+  dsmCategory           String? // e.g. "Depressive Disorders", "Bipolar and Related Disorders"
+  weekNumber            Int? // 1-5, for curriculum progression
+  diagnosticCriteriaMap Json? // [{ criterion: string, clientStatement: string }]
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assignments Assignment[]
+}
+
+enum ClientMode {
+  THERAPY
+  DIAGNOSIS
 }
 
 model Assignment {

@@ -74,9 +74,12 @@ export async function POST(request: NextRequest) {
         try {
           let fullResponse = '';
 
+          const isDiagnosis =
+            therapySession.assignment.client.mode === 'DIAGNOSIS';
+
           const response = await anthropic.messages.create({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 300,
+            max_tokens: isDiagnosis ? 150 : 300,
             system: systemPrompt,
             messages: conversationHistory,
             stream: true,
