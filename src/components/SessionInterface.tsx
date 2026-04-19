@@ -23,9 +23,11 @@ interface SessionInterfaceProps {
   presentingConcern: string;
   existingMessages: Message[];
   previousSessions: PreviousSession[];
+  mode?: 'THERAPY' | 'DIAGNOSIS';
 }
 
-const SESSION_DURATION = 50 * 60; // 50 minutes in seconds
+const THERAPY_DURATION = 50 * 60; // 50 minutes
+const DIAGNOSIS_DURATION = 30 * 60; // 30 minutes
 
 export function SessionInterface({
   sessionId,
@@ -34,7 +36,10 @@ export function SessionInterface({
   presentingConcern,
   existingMessages,
   previousSessions,
+  mode = 'THERAPY',
 }: SessionInterfaceProps) {
+  const isDiagnosis = mode === 'DIAGNOSIS';
+  const SESSION_DURATION = isDiagnosis ? DIAGNOSIS_DURATION : THERAPY_DURATION;
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>(existingMessages);
   const [input, setInput] = useState('');
@@ -51,7 +56,7 @@ export function SessionInterface({
     const firstMessageTime = new Date(existingMessages[0].timestamp).getTime();
     const elapsed = Math.floor((Date.now() - firstMessageTime) / 1000);
     return Math.max(0, SESSION_DURATION - elapsed);
-  }, [existingMessages]);
+  }, [existingMessages, SESSION_DURATION]);
 
   const [remainingTime] = useState(calculateRemainingTime);
 
@@ -69,11 +74,13 @@ export function SessionInterface({
 
   const handleTimeUp = useCallback(async () => {
     setIsEnded(true);
-    // End the session
     await fetch(`/api/sessions/${sessionId}/end`, {
       method: 'POST',
     });
-  }, [sessionId]);
+    if (isDiagnosis) {
+      router.refresh();
+    }
+  }, [sessionId, isDiagnosis, router]);
 
   const handleWarning = useCallback((minutesLeft: number) => {
     setWarning(`${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} remaining`);
@@ -81,11 +88,17 @@ export function SessionInterface({
   }, []);
 
   const handleEndSession = async () => {
-    if (confirm('Are you sure you want to end this session early?')) {
+    const message = isDiagnosis
+      ? 'End this intake now? You will be asked for your diagnostic impression and shown the answer.'
+      : 'Are you sure you want to end this session early?';
+    if (confirm(message)) {
       setIsEnded(true);
       await fetch(`/api/sessions/${sessionId}/end`, {
         method: 'POST',
       });
+      if (isDiagnosis) {
+        router.refresh();
+      }
     }
   };
 
@@ -220,6 +233,17 @@ export function SessionInterface({
   };
 
   if (isEnded) {
+    if (isDiagnosis) {
+      // Brief state while router.refresh() re-renders the server component
+      // into the debrief page.
+      return (
+        <div className="max-w-4xl mx-auto">
+          <div className="card text-center py-12">
+            <p className="text-gray-600">Preparing debrief...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="max-w-4xl mx-auto">
         <div className="card text-center py-12">
@@ -248,10 +272,14 @@ export function SessionInterface({
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold">
-              Session {sessionNumber} with {clientName}
+              {isDiagnosis
+                ? `Intake Interview with ${clientName}`
+                : `Session ${sessionNumber} with ${clientName}`}
             </h1>
             <p className="text-sm text-gray-500">
-              {sessionNumber === 1
+              {isDiagnosis
+                ? '30-minute diagnostic interview. Introduce yourself and elicit the presenting concern.'
+                : sessionNumber === 1
                 ? 'First session - Begin by introducing yourself'
                 : `Continuing from session ${sessionNumber - 1}`}
             </p>
@@ -277,19 +305,29 @@ export function SessionInterface({
         )}
       </div>
 
-      {/* Client Info Banner */}
-      <div className="bg-gray-50 border-x border-gray-200 p-3">
-        <p className="text-sm">
-          <span className="font-medium">Presenting Concern:</span>{' '}
-          {presentingConcern}
-        </p>
-      </div>
+      {/* Client Info Banner (hidden in diagnosis mode — students should elicit this) */}
+      {!isDiagnosis && (
+        <div className="bg-gray-50 border-x border-gray-200 p-3">
+          <p className="text-sm">
+            <span className="font-medium">Presenting Concern:</span>{' '}
+            {presentingConcern}
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="bg-white border-x border-gray-200 h-[400px] overflow-y-auto p-4 chat-container">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
-            {sessionNumber === 1 ? (
+            {isDiagnosis ? (
+              <>
+                <p>Begin the intake by introducing yourself.</p>
+                <p className="text-sm mt-2">
+                  You might start with: &quot;Hello, I&apos;m [your name]. Thanks
+                  for coming in today. What brings you here?&quot;
+                </p>
+              </>
+            ) : sessionNumber === 1 ? (
               <>
                 <p>Begin the session by introducing yourself.</p>
                 <p className="text-sm mt-2">

@@ -64,6 +64,9 @@ model Client {
   weekNumber            Int? // 1-5, for curriculum progression
   diagnosticCriteriaMap Json? // [{ criterion: string, clientStatement: string }]
 
+  // When true, any instructor can see and assign this client (only owner can edit/delete).
+  isShared Boolean @default(false)
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assignments Assignment[]
@@ -91,11 +94,12 @@ model Session {
   id            String        @id @default(cuid())
   assignmentId  String
   assignment    Assignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  sessionNumber Int // 1, 2, or 3
+  sessionNumber Int // 1, 2, or 3 (therapy); 1 (diagnosis)
   status        SessionStatus @default(IN_PROGRESS)
   startedAt     DateTime      @default(now())
   endedAt       DateTime?
   duration      Int? // Duration in seconds
+  studentGuess  String? // Student's diagnostic guess before the reveal (diagnosis mode)
 
   messages Message[]
 

@@ -11,7 +11,9 @@ export async function GET() {
   }
 
   const clients = await prisma.client.findMany({
-    where: { instructorId: session.user.id },
+    where: {
+      OR: [{ instructorId: session.user.id }, { isShared: true }],
+    },
     orderBy: { createdAt: 'desc' },
   });
 

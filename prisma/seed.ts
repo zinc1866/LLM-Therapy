@@ -1632,6 +1632,7 @@ Bob was reluctantly convinced to try therapy by his doctor, who noticed signs of
         data: {
           instructorId: instructor.id,
           mode: 'DIAGNOSIS',
+          isShared: true,
           ...c,
         },
       });
@@ -1639,6 +1640,20 @@ Bob was reluctantly convinced to try therapy by his doctor, who noticed signs of
         `  [Week ${c.weekNumber}] ${created.name} — ${c.targetDiagnosis}`
       );
     }
+  }
+
+  // Always ensure seeded diagnostic clients are shared with all instructors.
+  // Safe to run on every seed: no-op when already shared.
+  const sharedUpdate = await prisma.client.updateMany({
+    where: {
+      instructorId: instructor.id,
+      mode: 'DIAGNOSIS',
+      isShared: false,
+    },
+    data: { isShared: true },
+  });
+  if (sharedUpdate.count > 0) {
+    console.log(`Marked ${sharedUpdate.count} existing diagnostic clients as shared`);
   }
 
   console.log('\n✅ Database seeded successfully!');

@@ -12,16 +12,20 @@ export default async function StudentsPage() {
     orderBy: { name: 'asc' },
   });
 
-  // Get instructor's clients
+  // Get instructor's clients + any shared clients
   const clients = await prisma.client.findMany({
-    where: { instructorId: session!.user.id },
+    where: {
+      OR: [{ instructorId: session!.user.id }, { isShared: true }],
+    },
     orderBy: { name: 'asc' },
   });
 
-  // Get existing assignments for instructor's clients
+  // Existing assignments for any client this instructor can see
   const assignments = await prisma.assignment.findMany({
     where: {
-      client: { instructorId: session!.user.id },
+      client: {
+        OR: [{ instructorId: session!.user.id }, { isShared: true }],
+      },
     },
     include: {
       client: { select: { id: true, name: true } },

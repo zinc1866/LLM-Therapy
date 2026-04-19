@@ -17,7 +17,7 @@ export async function GET(
   const client = await prisma.client.findFirst({
     where: {
       id,
-      instructorId: session.user.id,
+      OR: [{ instructorId: session.user.id }, { isShared: true }],
     },
   });
 

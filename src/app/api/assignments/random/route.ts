@@ -42,11 +42,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify all clients belong to this instructor
+    // Verify all clients are either this instructor's or shared
     const clients = await prisma.client.findMany({
       where: {
         id: { in: clientIds },
-        instructorId: session.user.id,
+        OR: [{ instructorId: session.user.id }, { isShared: true }],
       },
       select: { id: true, name: true },
     });

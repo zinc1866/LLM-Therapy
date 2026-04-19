@@ -9,8 +9,8 @@ export default async function BankPage() {
   const [clients, students] = await Promise.all([
     prisma.client.findMany({
       where: {
-        instructorId: session!.user.id,
         mode: 'DIAGNOSIS',
+        OR: [{ instructorId: session!.user.id }, { isShared: true }],
       },
       select: {
         id: true,

@@ -7,7 +7,9 @@ export default async function ClientsPage() {
   const session = await getServerSession(authOptions);
 
   const clients = await prisma.client.findMany({
-    where: { instructorId: session!.user.id },
+    where: {
+      OR: [{ instructorId: session!.user.id }, { isShared: true }],
+    },
     include: {
       _count: {
         select: { assignments: true },
@@ -15,6 +17,8 @@ export default async function ClientsPage() {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  const ownerId = session!.user.id;
 
   return (
     <div>
@@ -47,7 +51,7 @@ export default async function ClientsPage() {
               className="card flex justify-between items-start"
             >
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h3 className="text-lg font-semibold">{client.name}</h3>
                   {client.mode === 'DIAGNOSIS' ? (
                     <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-medium">
@@ -57,6 +61,11 @@ export default async function ClientsPage() {
                   ) : (
                     <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-medium">
                       Therapy
+                    </span>
+                  )}
+                  {client.isShared && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
+                      Shared
                     </span>
                   )}
                 </div>
@@ -77,12 +86,21 @@ export default async function ClientsPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <Link
-                  href={`/instructor/clients/${client.id}`}
-                  className="btn btn-secondary text-sm"
-                >
-                  Edit
-                </Link>
+                {client.instructorId === ownerId ? (
+                  <Link
+                    href={`/instructor/clients/${client.id}`}
+                    className="btn btn-secondary text-sm"
+                  >
+                    Edit
+                  </Link>
+                ) : (
+                  <span
+                    className="btn btn-secondary text-sm opacity-60 cursor-not-allowed"
+                    title="Only the client's owner can edit or delete"
+                  >
+                    View-only
+                  </span>
+                )}
                 <Link
                   href={`/instructor/clients/${client.id}/assign`}
                   className="btn btn-primary text-sm"

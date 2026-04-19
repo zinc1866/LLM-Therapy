@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
   try {
     const { studentId, clientId } = await request.json();
 
-    // Verify the client belongs to this instructor
+    // Verify the client is either this instructor's or shared
     const client = await prisma.client.findFirst({
       where: {
         id: clientId,
-        instructorId: session.user.id,
+        OR: [{ instructorId: session.user.id }, { isShared: true }],
       },
     });
 

@@ -3,6 +3,27 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import { SessionInterface } from '@/components/SessionInterface';
+import { DiagnosisDebrief } from '@/components/DiagnosisDebrief';
+
+type CriterionRow = { criterion: string; clientStatement: string };
+
+function parseCriteriaMap(raw: unknown): CriterionRow[] | null {
+  if (!Array.isArray(raw)) return null;
+  const result: CriterionRow[] = [];
+  for (const entry of raw) {
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      'criterion' in entry &&
+      'clientStatement' in entry &&
+      typeof (entry as CriterionRow).criterion === 'string' &&
+      typeof (entry as CriterionRow).clientStatement === 'string'
+    ) {
+      result.push(entry as CriterionRow);
+    }
+  }
+  return result.length > 0 ? result : null;
+}
 
 export default async function SessionPage({
   params,
@@ -12,7 +33,6 @@ export default async function SessionPage({
   const session = await getServerSession(authOptions);
   const { assignmentId } = params;
 
-  // Get assignment with client info
   const assignment = await prisma.assignment.findFirst({
     where: {
       id: assignmentId,
@@ -23,6 +43,10 @@ export default async function SessionPage({
         select: {
           name: true,
           presentingConcern: true,
+          mode: true,
+          targetDiagnosis: true,
+          dsmCategory: true,
+          diagnosticCriteriaMap: true,
         },
       },
       sessions: {
@@ -40,7 +64,9 @@ export default async function SessionPage({
     notFound();
   }
 
-  // Determine current session
+  const isDiagnosis = assignment.client.mode === 'DIAGNOSIS';
+  const maxSessions = isDiagnosis ? 1 : 3;
+
   const completedSessions = assignment.sessions.filter(
     (s) => s.status === 'COMPLETED'
   );
@@ -48,8 +74,26 @@ export default async function SessionPage({
     (s) => s.status === 'IN_PROGRESS'
   );
 
-  // If all 3 sessions complete, redirect to dashboard
-  if (completedSessions.length >= 3) {
+  // Diagnosis mode: single session. If it's completed, show the debrief.
+  if (isDiagnosis && completedSessions.length >= 1) {
+    const completed = completedSessions[0];
+    return (
+      <DiagnosisDebrief
+        sessionId={completed.id}
+        clientName={assignment.client.name}
+        targetDiagnosis={assignment.client.targetDiagnosis}
+        dsmCategory={assignment.client.dsmCategory}
+        diagnosticCriteriaMap={parseCriteriaMap(
+          assignment.client.diagnosticCriteriaMap
+        )}
+        messages={completed.messages}
+        studentGuess={completed.studentGuess}
+      />
+    );
+  }
+
+  // Therapy mode: bounce back to dashboard once all 3 are done.
+  if (!isDiagnosis && completedSessions.length >= maxSessions) {
     redirect('/student');
   }
 
@@ -58,7 +102,6 @@ export default async function SessionPage({
     ? inProgressSession.sessionNumber
     : completedSessions.length + 1;
 
-  // If no in-progress session, create one
   if (!currentSession) {
     currentSession = await prisma.session.create({
       data: {
@@ -72,7 +115,6 @@ export default async function SessionPage({
     });
   }
 
-  // Get previous sessions for context
   const previousSessions = assignment.sessions.filter(
     (s) => s.status === 'COMPLETED' && s.sessionNumber < nextSessionNumber
   );
@@ -88,6 +130,7 @@ export default async function SessionPage({
         sessionNumber: s.sessionNumber,
         messages: s.messages,
       }))}
+      mode={assignment.client.mode === 'DIAGNOSIS' ? 'DIAGNOSIS' : 'THERAPY'}
     />
   );
 }
