@@ -42,6 +42,8 @@ export async function PUT(
   try {
     const data = await request.json();
 
+    const mode = data.mode === 'DIAGNOSIS' ? 'DIAGNOSIS' : 'THERAPY';
+
     const client = await prisma.client.updateMany({
       where: {
         id,
@@ -67,6 +69,11 @@ export async function PUT(
         communicationStyle: data.communicationStyle || null,
         resistanceLevel: data.resistanceLevel || 'medium',
         therapeuticGoals: data.therapeuticGoals || null,
+        mode,
+        targetDiagnosis: data.targetDiagnosis || null,
+        dsmCategory: data.dsmCategory || null,
+        weekNumber: data.weekNumber ?? null,
+        diagnosticCriteriaMap: data.diagnosticCriteriaMap ?? null,
       },
     });
 

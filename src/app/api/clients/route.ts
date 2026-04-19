@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
 
+    const mode = data.mode === 'DIAGNOSIS' ? 'DIAGNOSIS' : 'THERAPY';
+
     const client = await prisma.client.create({
       data: {
         instructorId: session.user.id,
@@ -50,6 +52,11 @@ export async function POST(request: NextRequest) {
         communicationStyle: data.communicationStyle || null,
         resistanceLevel: data.resistanceLevel || 'medium',
         therapeuticGoals: data.therapeuticGoals || null,
+        mode,
+        targetDiagnosis: data.targetDiagnosis || null,
+        dsmCategory: data.dsmCategory || null,
+        weekNumber: data.weekNumber ?? null,
+        diagnosticCriteriaMap: data.diagnosticCriteriaMap ?? null,
       },
     });
 
