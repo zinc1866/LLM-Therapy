@@ -20,9 +20,14 @@ export default async function ClientsPage() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Simulated Clients</h1>
-        <Link href="/instructor/clients/new" className="btn btn-primary">
-          Create New Client
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/instructor/bank" className="btn btn-secondary">
+            Client Bank
+          </Link>
+          <Link href="/instructor/clients/new" className="btn btn-primary">
+            Create New Client
+          </Link>
+        </div>
       </div>
 
       {clients.length === 0 ? (
@@ -42,8 +47,25 @@ export default async function ClientsPage() {
               className="card flex justify-between items-start"
             >
               <div>
-                <h3 className="text-lg font-semibold">{client.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-semibold">{client.name}</h3>
+                  {client.mode === 'DIAGNOSIS' ? (
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-medium">
+                      Diagnosis
+                      {client.weekNumber ? ` · Week ${client.weekNumber}` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-medium">
+                      Therapy
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-600 mt-1">{client.presentingConcern}</p>
+                {client.mode === 'DIAGNOSIS' && client.targetDiagnosis && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    Target (hidden from students): {client.targetDiagnosis}
+                  </p>
+                )}
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
                   {client.age && <span>Age: {client.age}</span>}
                   {client.pronouns && <span>Pronouns: {client.pronouns}</span>}

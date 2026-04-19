@@ -17,6 +17,7 @@ export function Navigation() {
     ? [
         { href: '/instructor', label: 'Dashboard' },
         { href: '/instructor/clients', label: 'Clients' },
+        { href: '/instructor/bank', label: 'Client Bank' },
         { href: '/instructor/students', label: 'Students' },
         { href: '/instructor/transcripts', label: 'Transcripts' },
       ]
