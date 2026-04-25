@@ -314,9 +314,9 @@ export function ClientBank({
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Each selected student will be randomly assigned one client from the
-          pool they don&apos;t already have. Same client may be assigned to
-          multiple students.
+          Each selected student gets one randomly chosen client from the pool —
+          no two students in this batch will share a client. If the pool is
+          smaller than the number of students, the extras are skipped.
         </p>
       </div>
 

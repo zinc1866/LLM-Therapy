@@ -92,16 +92,26 @@ export async function POST(request: NextRequest) {
     const assigned: AssignedRecord[] = [];
     const skipped: SkippedRecord[] = [];
 
-    for (const studentId of studentIds) {
+    // Clients already handed out in THIS batch — used to enforce that no two
+    // students in the same batch end up with the same client.
+    const usedInBatch = new Set<string>();
+
+    // Shuffle students so that when the pool is smaller than the student set,
+    // it isn't always the same students at the end of the list who get skipped.
+    const shuffledStudentIds = [...studentIds].sort(() => Math.random() - 0.5);
+
+    for (const studentId of shuffledStudentIds) {
       const eligible = clientIds.filter(
-        (cid) => !existingKey.has(`${studentId}:${cid}`)
+        (cid) =>
+          !existingKey.has(`${studentId}:${cid}`) && !usedInBatch.has(cid)
       );
 
       if (eligible.length === 0) {
         skipped.push({
           studentId,
           studentName: studentNameById.get(studentId) ?? studentId,
-          reason: 'Student is already assigned to every client in the pool',
+          reason:
+            'No unique client left in the pool (already assigned, or claimed by another student in this batch)',
         });
         continue;
       }
@@ -112,10 +122,8 @@ export async function POST(request: NextRequest) {
         data: { studentId, clientId: pick },
       });
 
-      // Track so a subsequent student in this batch can't re-pick the same
-      // (studentId, clientId) — but per-student uniqueness is the constraint,
-      // so we only need to avoid duplicates for THIS student going forward.
       existingKey.add(`${studentId}:${pick}`);
+      usedInBatch.add(pick);
 
       assigned.push({
         studentId,
