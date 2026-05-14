@@ -20,10 +20,12 @@ export function Navigation() {
         { href: '/instructor/bank', label: 'Client Bank' },
         { href: '/instructor/students', label: 'Students' },
         { href: '/instructor/transcripts', label: 'Transcripts' },
+        { href: '/instructor/forensic-quiz', label: 'Forensic Quiz' },
       ]
     : [
         { href: '/student', label: 'Dashboard' },
         { href: '/student/transcripts', label: 'My Transcripts' },
+        { href: '/student/forensic-quiz', label: 'Career Quiz' },
       ];
 
   return (
