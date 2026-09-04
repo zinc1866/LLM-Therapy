@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
         id: sessionId,
         assignment: {
           studentId: session.user.id,
+          student: { archivedAt: null },
         },
         status: 'IN_PROGRESS',
       },

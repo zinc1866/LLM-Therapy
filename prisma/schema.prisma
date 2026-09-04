@@ -17,10 +17,48 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Set when an instructor archives a past student. Archived students can't log
+  // in and are hidden from rosters/pickers, but their transcripts are kept.
+  archivedAt DateTime?
+
   // Relations
   clients              Client[]                  // Instructor's created clients
   assignments          Assignment[]              // Student's assigned clients
   forensicSubmissions  ForensicQuizSubmission[]  // Career-quiz submissions (forensic psych course)
+  ownedGroups          StudentGroup[]            // Groups this instructor created
+  groupMemberships     StudentGroupMember[]      // Groups this student belongs to
+}
+
+// A cohort / section of students (e.g. "PSY 501 - Fall 2026"), owned by the
+// instructor who created it. Purely organizational: grouping never changes how
+// clients are assigned, it just lets an instructor filter and bulk-select.
+model StudentGroup {
+  id           String @id @default(cuid())
+  instructorId String
+  instructor   User   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members StudentGroupMember[]
+
+  @@unique([instructorId, name])
+}
+
+// Join table — a student may belong to several groups.
+model StudentGroupMember {
+  id        String       @id @default(cuid())
+  groupId   String
+  group     StudentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([groupId, studentId])
+  @@index([studentId])
 }
 
 enum Role {

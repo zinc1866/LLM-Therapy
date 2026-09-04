@@ -5,6 +5,8 @@ An AI-powered web application for clinical psychology students to practice psych
 ## Features
 
 - **Instructor Dashboard**: Create simulated clients with detailed identity profiles, assign them to students, and review all session transcripts
+- **Student Groups**: Organize students into cohorts or lab sections, then filter rosters and assign a whole section at once
+- **Archiving**: Retire past students at the end of a term — they lose access and drop off your rosters, but their transcripts are kept
 - **Student Dashboard**: View assigned clients, conduct 50-minute therapy sessions, and review your own transcripts
 - **AI-Powered Clients**: Claude AI simulates realistic client responses based on configured demographics, identities, and presenting concerns
 - **Session Continuity**: Full context is maintained across three consecutive sessions
@@ -39,9 +41,12 @@ An AI-powered web application for clinical psychology students to practice psych
    ```bash
    cp .env.example .env
    ```
-   Then edit `.env` and add your Anthropic API key:
+   Then edit `.env` and add your Anthropic API key and an instructor
+   registration code (any string you choose — you'll share it with people who
+   should be able to register as an instructor):
    ```
    ANTHROPIC_API_KEY=sk-ant-your-key-here
+   INSTRUCTOR_REGISTRATION_CODE=your-chosen-code-here
    ```
 
 3. **Initialize the database**:
@@ -70,11 +75,44 @@ An AI-powered web application for clinical psychology students to practice psych
 
 ### For Instructors
 
+0. Register with role "Instructor" and enter the instructor registration code
+   (from `INSTRUCTOR_REGISTRATION_CODE`) when creating your account
 1. Log in with an instructor account
 2. Go to **Clients** to create simulated client profiles
 3. Configure client demographics, identities, and clinical details
-4. Go to **Students** to assign clients to enrolled students
-5. Go to **Transcripts** to review student session transcripts
+4. Go to **Groups** to organize students into cohorts or lab sections (optional)
+5. Go to **Students** to assign clients to enrolled students
+6. Go to **Transcripts** to review student session transcripts
+
+### Groups
+
+Groups are cohorts or sections — e.g. "PSY 501 – Fall 2026". They're purely
+organizational: every student still works with their own client. A student can
+belong to more than one group, and groups are private to the instructor who
+created them.
+
+Once students are grouped you can:
+
+- Filter the student roster by group (or by "Ungrouped")
+- Assign one client to an entire group in a single click, from **Students**
+- Narrow the **Client Bank** student picker to one section before randomly
+  assigning clients
+
+Deleting a group removes only the group — the students and all of their work
+stay put.
+
+### Archiving past students
+
+At the end of a term, use **Archive** on the student roster (Students page).
+An archived student:
+
+- can no longer log in
+- disappears from rosters, group editors, and every assignment picker
+- keeps all assignments, sessions, and transcripts, which stay visible under
+  **Transcripts** with an "Archived" badge
+
+Archiving is reversible — switch the roster to the **Archived** tab and click
+**Restore**.
 
 ### For Students
 
@@ -117,6 +155,7 @@ The AI maintains full memory of previous sessions to ensure continuity.
    - `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
    - `NEXTAUTH_URL` (your production URL)
    - `ANTHROPIC_API_KEY`
+   - `INSTRUCTOR_REGISTRATION_CODE`
 4. Deploy!
 
 ## Estimated Costs

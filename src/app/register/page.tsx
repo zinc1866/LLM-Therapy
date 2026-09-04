@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'STUDENT' | 'INSTRUCTOR'>('STUDENT');
+  const [instructorCode, setInstructorCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -34,7 +35,13 @@ export default function RegisterPage() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, role }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          role,
+          ...(role === 'INSTRUCTOR' ? { instructorCode } : {}),
+        }),
       });
 
       const data = await response.json();
@@ -149,6 +156,25 @@ export default function RegisterPage() {
               </label>
             </div>
           </div>
+
+          {role === 'INSTRUCTOR' && (
+            <div>
+              <label htmlFor="instructorCode" className="label">
+                Instructor Code
+              </label>
+              <input
+                id="instructorCode"
+                type="text"
+                value={instructorCode}
+                onChange={(e) => setInstructorCode(e.target.value)}
+                className="input"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Ask your department or platform admin for this code.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

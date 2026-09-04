@@ -19,6 +19,7 @@ export function Navigation() {
         { href: '/instructor/clients', label: 'Clients' },
         { href: '/instructor/bank', label: 'Client Bank' },
         { href: '/instructor/students', label: 'Students' },
+        { href: '/instructor/groups', label: 'Groups' },
         { href: '/instructor/transcripts', label: 'Transcripts' },
         { href: '/instructor/forensic-quiz', label: 'Forensic Quiz' },
       ]

@@ -21,6 +21,12 @@ type BankStudent = {
   email: string;
 };
 
+type BankGroup = {
+  id: string;
+  name: string;
+  studentIds: string[];
+};
+
 type AssignedRecord = {
   studentId: string;
   studentName: string;
@@ -44,12 +50,15 @@ const WEEK_OPTIONS: (number | 'all')[] = ['all', 1, 2, 3, 4, 5];
 export function ClientBank({
   clients,
   students,
+  groups,
 }: {
   clients: BankClient[];
   students: BankStudent[];
+  groups: BankGroup[];
 }) {
   const router = useRouter();
   const [weekFilter, setWeekFilter] = useState<number | 'all'>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +69,18 @@ export function ClientBank({
     if (weekFilter === 'all') return clients;
     return clients.filter((c) => c.weekNumber === weekFilter);
   }, [clients, weekFilter]);
+
+  const visibleStudents = useMemo(() => {
+    if (groupFilter === 'all') return students;
+    if (groupFilter === 'ungrouped') {
+      const grouped = new Set(groups.flatMap((g) => g.studentIds));
+      return students.filter((s) => !grouped.has(s.id));
+    }
+    const memberIds = new Set(
+      groups.find((g) => g.id === groupFilter)?.studentIds ?? []
+    );
+    return students.filter((s) => memberIds.has(s.id));
+  }, [students, groups, groupFilter]);
 
   const toggleClient = (id: string) => {
     setSelectedClients((prev) => {
@@ -95,12 +116,23 @@ export function ClientBank({
     });
   };
 
+  // Scoped to the group filter, so "select all" while a section is showing
+  // picks exactly that section. Selections survive a filter change, which is
+  // what lets you build a pool out of two sections.
   const selectAllStudents = () => {
-    setSelectedStudents(new Set(students.map((s) => s.id)));
+    setSelectedStudents((prev) => {
+      const next = new Set(prev);
+      for (const s of visibleStudents) next.add(s.id);
+      return next;
+    });
   };
 
   const clearAllStudents = () => {
-    setSelectedStudents(new Set());
+    setSelectedStudents((prev) => {
+      const next = new Set(prev);
+      for (const s of visibleStudents) next.delete(s.id);
+      return next;
+    });
   };
 
   const canSubmit =
@@ -265,8 +297,31 @@ export function ClientBank({
             </div>
           </div>
 
+          {groups.length > 0 && (
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="input mb-3 text-sm"
+              aria-label="Filter students by group"
+            >
+              <option value="all">All students ({students.length})</option>
+              <option value="ungrouped">Ungrouped</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} ({g.studentIds.length})
+                </option>
+              ))}
+            </select>
+          )}
+
+          {visibleStudents.length === 0 && (
+            <p className="text-sm text-gray-500 py-6 text-center">
+              No active students in this group.
+            </p>
+          )}
+
           <div className="space-y-1 max-h-[32rem] overflow-y-auto pr-1">
-            {students.map((s) => {
+            {visibleStudents.map((s) => {
               const checked = selectedStudents.has(s.id);
               return (
                 <label

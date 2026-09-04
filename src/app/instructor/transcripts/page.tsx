@@ -21,7 +21,7 @@ export default async function TranscriptsPage({
     include: {
       assignment: {
         include: {
-          student: { select: { name: true, email: true } },
+          student: { select: { name: true, email: true, archivedAt: true } },
           client: { select: { name: true } },
         },
       },
@@ -62,6 +62,11 @@ export default async function TranscriptsPage({
                   >
                     <div className="font-medium text-sm">
                       {sess.assignment.student.name}
+                      {sess.assignment.student.archivedAt && (
+                        <span className="ml-2 text-xs font-normal bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">
+                          Archived
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-500">
                       with {sess.assignment.client.name}

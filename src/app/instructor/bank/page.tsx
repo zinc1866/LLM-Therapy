@@ -6,7 +6,7 @@ import { ClientBank } from '@/components/ClientBank';
 export default async function BankPage() {
   const session = await getServerSession(authOptions);
 
-  const [clients, students] = await Promise.all([
+  const [clients, students, groups] = await Promise.all([
     prisma.client.findMany({
       where: {
         mode: 'DIAGNOSIS',
@@ -26,8 +26,18 @@ export default async function BankPage() {
       orderBy: [{ weekNumber: 'asc' }, { name: 'asc' }],
     }),
     prisma.user.findMany({
-      where: { role: 'STUDENT' },
+      where: { role: 'STUDENT', archivedAt: null },
       select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.studentGroup.findMany({
+      where: { instructorId: session!.user.id },
+      include: {
+        members: {
+          where: { student: { archivedAt: null } },
+          select: { studentId: true },
+        },
+      },
       orderBy: { name: 'asc' },
     }),
   ]);
@@ -55,7 +65,15 @@ export default async function BankPage() {
           <p className="text-gray-500">No students have registered yet.</p>
         </div>
       ) : (
-        <ClientBank clients={clients} students={students} />
+        <ClientBank
+          clients={clients}
+          students={students}
+          groups={groups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            studentIds: g.members.map((m) => m.studentId),
+          }))}
+        />
       )}
     </div>
   );

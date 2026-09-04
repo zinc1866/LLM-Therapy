@@ -58,18 +58,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify all IDs are students
+    // Verify all IDs are active (non-archived) students
     const students = await prisma.user.findMany({
       where: {
         id: { in: studentIds },
         role: 'STUDENT',
+        archivedAt: null,
       },
       select: { id: true, name: true },
     });
 
     if (students.length !== studentIds.length) {
       return NextResponse.json(
-        { error: 'One or more students not found' },
+        { error: 'One or more students not found or archived' },
         { status: 404 }
       );
     }

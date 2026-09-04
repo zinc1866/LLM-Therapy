@@ -33,6 +33,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid password');
         }
 
+        if (user.archivedAt) {
+          throw new Error(
+            'This account has been archived. Contact your instructor.'
+          );
+        }
+
         return {
           id: user.id,
           email: user.email,
