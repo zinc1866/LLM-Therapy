@@ -46,8 +46,12 @@ An AI-powered web application for clinical psychology students to practice psych
    should be able to register as an instructor):
    ```
    ANTHROPIC_API_KEY=sk-ant-your-key-here
+   ANTHROPIC_MODEL=claude-sonnet-4-6
    INSTRUCTOR_REGISTRATION_CODE=your-chosen-code-here
    ```
+   `ANTHROPIC_MODEL` is optional and defaults to `claude-sonnet-4-6`. It controls
+   simulated client replies and client profile generation. Use an active model
+   available to your Anthropic account.
 
 3. **Initialize the database**:
    ```bash
@@ -155,6 +159,7 @@ The AI maintains full memory of previous sessions to ensure continuity.
    - `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
    - `NEXTAUTH_URL` (your production URL)
    - `ANTHROPIC_API_KEY`
+   - `ANTHROPIC_MODEL` (optional; defaults to `claude-sonnet-4-6`)
    - `INSTRUCTOR_REGISTRATION_CODE`
 4. Deploy!
 

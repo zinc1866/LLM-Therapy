@@ -2,8 +2,10 @@ import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
-import anthropic from '@/lib/anthropic';
+import anthropic, { ANTHROPIC_MODEL } from '@/lib/anthropic';
 import { buildSystemPrompt, buildConversationMessages } from '@/lib/prompts';
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,7 +17,51 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { sessionId, message, previousSessions } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
+        status: 400,
+      });
+    }
+
+    if (
+      !body ||
+      typeof body.sessionId !== 'string' ||
+      !body.sessionId.trim() ||
+      typeof body.message !== 'string' ||
+      !body.message.trim()
+    ) {
+      return new Response(
+        JSON.stringify({ error: 'A session and a message are required' }),
+        { status: 400 }
+      );
+    }
+
+    const { sessionId } = body;
+    const message = body.message.trim();
+    const previousSessions = body.previousSessions ?? [];
+    if (
+      !Array.isArray(previousSessions) ||
+      previousSessions.some(
+        (previous) =>
+          !previous ||
+          !Number.isInteger(previous.sessionNumber) ||
+          !Array.isArray(previous.messages) ||
+          previous.messages.some(
+            (entry: { role?: unknown; content?: unknown } | null) =>
+              !entry ||
+              typeof entry.role !== 'string' ||
+              typeof entry.content !== 'string'
+          )
+      )
+    ) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid previous session history' }),
+        { status: 400 }
+      );
+    }
 
     // Get the session and verify ownership
     const therapySession = await prisma.session.findFirst({
@@ -59,12 +105,12 @@ export async function POST(request: NextRequest) {
     const systemPrompt = buildSystemPrompt(
       therapySession.assignment.client,
       therapySession.sessionNumber,
-      previousSessions || []
+      previousSessions
     );
 
     // Build conversation history
     const conversationHistory = buildConversationMessages([
-      ...therapySession.messages,
+      ...therapySession.messages.filter((entry) => entry.content.trim()),
       { role: 'student', content: message },
     ]);
 
@@ -73,13 +119,20 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Acknowledge the saved question even if the provider or connection fails.
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ userMessageId: userMessage.id })}\n\n`
+            )
+          );
           let fullResponse = '';
+          let completed = false;
 
           const isDiagnosis =
             therapySession.assignment.client.mode === 'DIAGNOSIS';
 
           const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: ANTHROPIC_MODEL,
             max_tokens: isDiagnosis ? 150 : 300,
             system: systemPrompt,
             messages: conversationHistory,
@@ -87,6 +140,9 @@ export async function POST(request: NextRequest) {
           });
 
           for await (const event of response) {
+            if (event.type === 'message_stop') {
+              completed = true;
+            }
             if (
               event.type === 'content_block_delta' &&
               event.delta.type === 'text_delta'
@@ -97,6 +153,10 @@ export async function POST(request: NextRequest) {
                 encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`)
               );
             }
+          }
+
+          if (!completed || !fullResponse.trim()) {
+            throw new Error('Claude returned an incomplete or empty response');
           }
 
           // Save the AI's response
@@ -122,9 +182,22 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
+          const status =
+            error && typeof error === 'object' && 'status' in error
+              ? error.status
+              : undefined;
+          const errorMessage =
+            status === 401 || status === 403 || status === 404
+              ? 'The simulator is temporarily unavailable. Please contact your instructor.'
+              : status === 429
+              ? 'The simulator is busy right now. Please try again shortly.'
+              : 'The client could not finish responding. Please try again.';
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ error: 'Streaming failed' })}\n\n`
+              `data: ${JSON.stringify({
+                error: errorMessage,
+                userMessageId: userMessage.id,
+              })}\n\n`
             )
           );
           controller.close();

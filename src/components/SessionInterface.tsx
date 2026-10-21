@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SessionTimer } from './SessionTimer';
+import { readChatStream } from '@/lib/chat-stream';
 
 interface Message {
   id: string;
@@ -46,6 +47,7 @@ export function SessionInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const [responseError, setResponseError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -108,6 +110,7 @@ export function SessionInterface({
     const userMessage = input.trim();
     setInput('');
     setIsLoading(true);
+    setResponseError(null);
 
     // Add user message optimistically
     const tempUserMessage: Message = {
@@ -117,6 +120,15 @@ export function SessionInterface({
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, tempUserMessage]);
+
+    const tempAiMessage: Message = {
+      id: `temp-ai-${Date.now()}`,
+      role: 'client',
+      content: '',
+      timestamp: new Date(),
+    };
+    let savedUserMessageId: string | undefined;
+    let savedAiMessageId: string | undefined;
 
     try {
       const response = await fetch('/api/chat', {
@@ -130,95 +142,66 @@ export function SessionInterface({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        throw new Error(
+          response.status === 401
+            ? 'Your login has expired. Please sign in again.'
+            : response.status === 404
+            ? 'This session is no longer active. Please return to your dashboard.'
+            : 'The client could not respond. Please try again.'
+        );
       }
 
       const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
 
-      if (!reader) throw new Error('No reader available');
+      if (!reader) throw new Error('The client response was unavailable. Please try again.');
 
       // Add placeholder for AI response
-      const tempAiMessage: Message = {
-        id: `temp-ai-${Date.now()}`,
-        role: 'client',
-        content: '',
-        timestamp: new Date(),
-      };
       setMessages((prev) => [...prev, tempAiMessage]);
 
       let aiContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                aiContent += parsed.content;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  const lastIndex = updated.length - 1;
-                  if (updated[lastIndex].role === 'client') {
-                    updated[lastIndex] = {
-                      ...updated[lastIndex],
-                      content: aiContent,
-                    };
-                  }
-                  return updated;
-                });
-              }
-              if (parsed.messageId) {
-                // Update with real message IDs
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  // Update user message ID
-                  const userIndex = updated.findIndex(
-                    (m) => m.id === tempUserMessage.id
-                  );
-                  if (userIndex !== -1 && parsed.userMessageId) {
-                    updated[userIndex] = {
-                      ...updated[userIndex],
-                      id: parsed.userMessageId,
-                    };
-                  }
-                  // Update AI message ID
-                  const aiIndex = updated.findIndex(
-                    (m) => m.id === tempAiMessage.id
-                  );
-                  if (aiIndex !== -1) {
-                    updated[aiIndex] = {
-                      ...updated[aiIndex],
-                      id: parsed.messageId,
-                    };
-                  }
-                  return updated;
-                });
-              }
-            } catch {
-              // Skip invalid JSON
-            }
-          }
+      await readChatStream(reader, (event) => {
+        if (event.userMessageId) savedUserMessageId = event.userMessageId;
+        if (event.messageId) savedAiMessageId = event.messageId;
+        if (event.content) {
+          aiContent += event.content;
+          // Capture this value for React's queued state update.
+          const content = aiContent;
+          setMessages((prev) =>
+            prev.map((m) => m.id === tempAiMessage.id ? { ...m, content } : m)
+          );
         }
-      }
+      });
+
+      setMessages((prev) => prev.map((m) => {
+        if (m.id === tempUserMessage.id && savedUserMessageId) {
+          return { ...m, id: savedUserMessageId };
+        }
+        if (m.id === tempAiMessage.id && savedAiMessageId) {
+          return { ...m, id: savedAiMessageId };
+        }
+        return m;
+      }));
     } catch (error) {
       console.error('Error sending message:', error);
-      // Remove the optimistic messages on error
+      // Remove only this failed attempt; keep messages already saved by the server.
       setMessages((prev) =>
-        prev.filter(
-          (m) => !m.id.startsWith('temp-')
-        )
+        prev.flatMap((m) => {
+          if (m.id === tempAiMessage.id) {
+            return savedAiMessageId ? [{ ...m, id: savedAiMessageId }] : [];
+          }
+          if (m.id === tempUserMessage.id) {
+            return savedUserMessageId ? [{ ...m, id: savedUserMessageId }] : [];
+          }
+          return [m];
+        })
       );
-      alert('Failed to send message. Please try again.');
+      if (!savedUserMessageId) setInput(userMessage);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'The client could not respond. Please try again.';
+      setResponseError(savedUserMessageId
+        ? `Your message was saved. ${errorMessage}`
+        : errorMessage);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -363,7 +346,11 @@ export function SessionInterface({
               <p className="text-xs font-medium mb-1 opacity-70">
                 {message.role === 'student' ? 'You (Therapist)' : clientName}
               </p>
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <p className="whitespace-pre-wrap">
+                {message.content.trim() ? message.content : (isLoading && message.id.startsWith('temp-ai-')
+                  ? 'Typing...'
+                  : 'No response was received.')}
+              </p>
             </div>
           </div>
         ))}
@@ -380,6 +367,11 @@ export function SessionInterface({
 
       {/* Input */}
       <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-4">
+        {responseError && (
+          <p role="alert" className="text-sm text-red-700 mb-3">
+            {responseError}
+          </p>
+        )}
         <div className="flex gap-2">
           <textarea
             ref={inputRef}

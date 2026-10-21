@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import anthropic from '@/lib/anthropic';
+import anthropic, { ANTHROPIC_MODEL } from '@/lib/anthropic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -107,7 +107,7 @@ Generate a JSON object with these fields:
 Respond ONLY with the JSON object, no other text.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: ANTHROPIC_MODEL,
       max_tokens: isDiagnosis ? 3000 : 2000,
       messages: [{ role: 'user', content: prompt }],
     });
